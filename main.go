@@ -38,7 +38,7 @@ func main(){
 	totalChunks := 0
 
 	if fileSize != ""{
-		fmt.Printf("Loading ")
+		fmt.Println("Loading ")
 		
 		totalChunk, err := strconv.Atoi(fileSize)
 		if err != nil{
@@ -51,8 +51,8 @@ func main(){
 	var chunksRead int = 0
 	completion := 0.0
 	tick := 0.01
-	loadingBar:= LoadingBar("", 0)
-	fmt.Printf("%s 0%", loadingBar)
+	loadingBar:= LoadingBar("", 1)
+	fmt.Printf("%s 0%%", loadingBar)
 	for {
 		if totalChunks != 0{
 			completion = float64(chunksRead) / float64(totalChunks)

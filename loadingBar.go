@@ -9,8 +9,8 @@ func LoadingBar(loadingBar string, percent float64)string{
 	}
 
 	runes := []rune(loadingBar)
-	if (runes[int(percent)] == '-'){
-		runes[int(percent)] = '/'
+	if (runes[int(percent * 100)] == '-'){
+		runes[int(percent * 100)] = '/'
 	}
 
 	
