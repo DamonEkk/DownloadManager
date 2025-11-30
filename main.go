@@ -14,28 +14,20 @@ func main(){
 
 	fmt.Println("Please provide a url to download from")
 	fmt.Scanf("%s", &url)
-	resp, err := http.Get(url)
+	resp := Open_url(url)
 
-	if err != nil {
-		fmt.Printf("Incorrect or invalid http link")
-		return
-	}
-
-	if resp.StatusCode == 200 || resp.StatusCode == 206{
-		fmt.Printf("Valid html\n")
-	} else{
-		fmt.Println("Invalid html")
-		defer resp.Body.Close()
+	if (resp == nil){
+		fmt.Println("Failed to open url")
 	}
 	
 	contentType := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
 	fileSize := resp.Header.Get("Content-Length")
 	fileType := ConvertType(contentType) 
 
-	fmt.Printf("file size: %s\n", fileSize)
-	fmt.Printf("Test%s\n", fileType)
+	// Eventually get name from header and replace "test"
 	output, _ := os.Create("test" + fileType)
 	totalChunks := 0
+	dividedChunks := 0
 
 	if fileSize != ""{
 		fmt.Println("Loading ")
@@ -46,12 +38,26 @@ func main(){
 			return;
 		}
 		totalChunks = totalChunk
+		dividedChunks /= 8
+
+	// Make 8 different threads with their ranges.
+	Download_chunk(resp, totalChunks, output, buffer)
+	// Then we need to glue them together. 
+
+	}	else{
+		Download_chunk(resp, totalChunks, output, buffer)
 	}
 
-	var chunksRead int = 0
+	fmt.Println()
+}
+
+
+func Download_chunk(resp *http.Response, totalChunks int, output *os.File, buffer []byte){
+	var chunksRead int = 0 
 	completion := 0.0
 	tick := 0.01
 	loadingBar:= LoadingBar("", 1)
+
 	fmt.Printf("%s 0%%", loadingBar)
 	for {
 		if totalChunks != 0{
@@ -87,5 +93,41 @@ func main(){
 
 		chunksRead += chunk
 	}
-	fmt.Println()
+}
+
+
+func Multi_chunk(url string, startByte int, endByte int, output *os.File){
+
+	resp := Open_url(url)
+
+	if (resp == nil){
+		return
+	}
+
+	
+	contentType := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
+	fileType := ConvertType(contentType) 
+
+	for i := startByte; i < endByte; i++{
+			
+	}
+
+}
+
+func Open_url(url string) *http.Response{
+	resp, err := http.Get(url)
+
+	if err != nil {
+		fmt.Printf("Incorrect or invalid http link")
+		return nil
+	}
+
+	if resp.StatusCode == 200 || resp.StatusCode == 206{
+		fmt.Printf("Valid html\n")
+	} else{
+		fmt.Println("Invalid html")
+		defer resp.Body.Close()
+	}
+
+	return resp
 }
