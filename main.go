@@ -14,7 +14,7 @@ func main(){
 
 	fmt.Println("Please provide a url to download from")
 	fmt.Scanf("%s", &url)
-	resp := Open_url(url)
+	resp := Open_url(url, 0, 0)
 
 	if (resp == nil){
 		fmt.Println("Failed to open url")
@@ -38,13 +38,16 @@ func main(){
 			return;
 		}
 		totalChunks = totalChunk
-		dividedChunks /= 8
-
+		dividedChunks = totalChunks / 8
+		fmt.Printf("total chunks = %d\ndivided chunks = %d\n", totalChunks, dividedChunks)
 	// Make 8 different threads with their ranges.
-	Download_chunk(resp, totalChunks, output, buffer)
+		
+		Spin_threads(totalChunks, dividedChunks, url, output)
+		Download_chunk(resp, totalChunks, output, buffer)
 	// Then we need to glue them together. 
 
-	}	else{
+
+	}	else{ // Singlethread
 		Download_chunk(resp, totalChunks, output, buffer)
 	}
 
@@ -97,25 +100,37 @@ func Download_chunk(resp *http.Response, totalChunks int, output *os.File, buffe
 
 
 func Multi_chunk(url string, startByte int, endByte int, output *os.File){
-
-	resp := Open_url(url)
+	resp := Open_url(url, startByte, endByte)
 
 	if (resp == nil){
+		defer resp.Body.Close()
 		return
 	}
-
 	
-	contentType := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
-	fileType := ConvertType(contentType) 
+	chunk, _ := io.ReadAll(resp.Body)
 
-	for i := startByte; i < endByte; i++{
-			
-	}
+	output.Seek(int64(startByte), 0)
+	output.Write(chunk)
+	
 
+
+	resp.Body.Close()
 }
 
-func Open_url(url string) *http.Response{
-	resp, err := http.Get(url)
+func Open_url(url string, startByte int, endByte int) *http.Response{
+
+	var resp *http.Response
+	var err error
+
+	if (startByte == 0 || endByte == 0){
+		resp, err = http.Get(url)
+
+	} else{
+		// Get limited bytes 
+		limitReq, _ := http.NewRequest("GET", url, nil)
+		limitReq.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", startByte, endByte))
+		resp, err = http.DefaultClient.Do(limitReq)
+	}
 
 	if err != nil {
 		fmt.Printf("Incorrect or invalid http link")
@@ -130,4 +145,17 @@ func Open_url(url string) *http.Response{
 	}
 
 	return resp
+}
+
+
+func Spin_threads(totalChunks int, dividedChunks int, url string, output *os.File){
+	
+	startByte := 0
+	endByte := dividedChunks
+
+	for i := 0; i < 8; i++{	
+		go Multi_chunk(url, startByte, endByte - 1, output)
+		startByte += dividedChunks
+		endByte += dividedChunks
+	}
 }
