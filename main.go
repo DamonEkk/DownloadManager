@@ -6,6 +6,7 @@ import "net/http"
 import "os"
 import "io"
 import "strconv"
+import "sync"
 
 
 func main(){
@@ -41,9 +42,9 @@ func main(){
 		dividedChunks = totalChunks / 8
 		fmt.Printf("total chunks = %d\ndivided chunks = %d\n", totalChunks, dividedChunks)
 	// Make 8 different threads with their ranges.
-		
+
+
 		Spin_threads(totalChunks, dividedChunks, url, output)
-		Download_chunk(resp, totalChunks, output, buffer)
 	// Then we need to glue them together. 
 
 
@@ -103,7 +104,6 @@ func Multi_chunk(url string, startByte int, endByte int, output *os.File){
 	resp := Open_url(url, startByte, endByte)
 
 	if (resp == nil){
-		defer resp.Body.Close()
 		return
 	}
 	
@@ -122,7 +122,7 @@ func Open_url(url string, startByte int, endByte int) *http.Response{
 	var resp *http.Response
 	var err error
 
-	if (startByte == 0 || endByte == 0){
+	if (startByte == 0 && endByte == 0){
 		resp, err = http.Get(url)
 
 	} else{
@@ -141,7 +141,6 @@ func Open_url(url string, startByte int, endByte int) *http.Response{
 		fmt.Printf("Valid html\n")
 	} else{
 		fmt.Println("Invalid html")
-		defer resp.Body.Close()
 	}
 
 	return resp
@@ -152,10 +151,17 @@ func Spin_threads(totalChunks int, dividedChunks int, url string, output *os.Fil
 	
 	startByte := 0
 	endByte := dividedChunks
+	var waitGroup sync.WaitGroup	
+	waitGroup.Add(8)
 
 	for i := 0; i < 8; i++{	
-		go Multi_chunk(url, startByte, endByte - 1, output)
+		go func(startByte, endByte int) {
+			defer waitGroup.Done()
+			Multi_chunk(url, startByte, endByte - 1, output)
+		}(startByte, endByte)
 		startByte += dividedChunks
 		endByte += dividedChunks
 	}
+
+	waitGroup.Wait()
 }
