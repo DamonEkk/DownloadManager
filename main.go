@@ -29,7 +29,8 @@ func main(){
 	output, _ := os.Create("test" + fileType)
 	totalChunks := 0
 	dividedChunks := 0
-
+	
+	// For future need more limiters for multithreading, server may not allow some things. Could make some funky things happen
 	if fileSize != ""{
 		fmt.Println("Loading ")
 		
@@ -41,11 +42,9 @@ func main(){
 		totalChunks = totalChunk
 		dividedChunks = totalChunks / 8
 		fmt.Printf("total chunks = %d\ndivided chunks = %d\n", totalChunks, dividedChunks)
-	// Make 8 different threads with their ranges.
 
-
+		// Downloader for multi-threading
 		Spin_threads(totalChunks, dividedChunks, url, output)
-	// Then we need to glue them together. 
 
 
 	}	else{ // Singlethread
@@ -90,11 +89,8 @@ func Download_chunk(resp *http.Response, totalChunks int, output *os.File, buffe
 			if completion > tick{
 				loadingBar = LoadingBar(loadingBar, completion)
 				fmt.Printf("\r%s %d%%", loadingBar, int(completion * 100))
-
-				
 			}
 		}
-
 		chunksRead += chunk
 	}
 }
@@ -108,12 +104,10 @@ func Multi_chunk(url string, startByte int, endByte int, output *os.File){
 	}
 	
 	chunk, _ := io.ReadAll(resp.Body)
-
 	output.Seek(int64(startByte), 0)
 	output.Write(chunk)
+
 	
-
-
 	resp.Body.Close()
 }
 
@@ -152,7 +146,7 @@ func Spin_threads(totalChunks int, dividedChunks int, url string, output *os.Fil
 	startByte := 0
 	endByte := dividedChunks
 	var waitGroup sync.WaitGroup	
-	waitGroup.Add(8)
+	waitGroup.Add(9)
 
 	for i := 0; i < 8; i++{	
 		go func(startByte, endByte int) {
@@ -162,6 +156,11 @@ func Spin_threads(totalChunks int, dividedChunks int, url string, output *os.Fil
 		startByte += dividedChunks
 		endByte += dividedChunks
 	}
-
+	
+	go Multithread_loop()
 	waitGroup.Wait()
 }
+
+	
+
+
